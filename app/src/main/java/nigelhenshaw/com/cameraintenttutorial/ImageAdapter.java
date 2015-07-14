@@ -33,8 +33,11 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         File imageFile = imagesFile.listFiles()[position];
         // Bitmap imageBitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
         // holder.getImageView().setImageBitmap(imageBitmap);
+
+
         BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         workerTask.execute(imageFile);
+
     }
 
     @Override
