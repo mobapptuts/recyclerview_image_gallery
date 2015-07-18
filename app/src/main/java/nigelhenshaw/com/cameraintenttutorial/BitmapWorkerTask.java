@@ -17,6 +17,7 @@ public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
     WeakReference<ImageView> imageViewReferences;
     final static int TARGET_IMAGE_VIEW_WIDTH = 200;
     final static int TARGET_IMAGE_VIEW_HEIGHT = 200;
+    private File mImageFile;
 
     public BitmapWorkerTask(ImageView imageView) {
         imageViewReferences = new WeakReference<ImageView>(imageView);
@@ -25,15 +26,28 @@ public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
     @Override
     protected Bitmap doInBackground(File... params) {
         // return BitmapFactory.decodeFile(params[0].getAbsolutePath());
+        mImageFile = params[0];
         return decodeBitmapFromFile(params[0]);
     }
 
     @Override
     protected void onPostExecute(Bitmap bitmap) {
+        /*
         if(bitmap != null && imageViewReferences != null) {
             ImageView viewImage = imageViewReferences.get();
             if(viewImage != null) {
                 viewImage.setImageBitmap(bitmap);
+            }
+        }
+        */
+        if(isCancelled()) {
+            bitmap = null;
+        }
+        if(bitmap != null && imageViewReferences != null) {
+            ImageView imageView = imageViewReferences.get();
+            BitmapWorkerTask bitmapWorkerTask = ImageAdapter.getBitmapWorkerTask(imageView);
+            if(this == bitmapWorkerTask && imageView != null){
+                imageView.setImageBitmap(bitmap);
             }
         }
     }
@@ -61,5 +75,9 @@ public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
         bmOptions.inSampleSize = calculateInSampleSize(bmOptions);
         bmOptions.inJustDecodeBounds = false;
         return BitmapFactory.decodeFile(imageFile.getAbsolutePath(), bmOptions);
+    }
+
+    public File getImageFile() {
+        return mImageFile;
     }
 }
