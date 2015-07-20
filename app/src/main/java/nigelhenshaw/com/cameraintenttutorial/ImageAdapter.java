@@ -55,7 +55,11 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // holder.getImageView().setImageBitmap(imageBitmap);
         // BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         // workerTask.execute(imageFile);
-        if(checkBitmapWorkerTask(imageFile, holder.getImageView())) {
+        Bitmap bitmap = CamaraIntentActivity.getBitmapFromMemoryCache(imageFile.getName());
+        if(bitmap != null) {
+            holder.getImageView().setImageBitmap(bitmap);
+        }
+        else if(checkBitmapWorkerTask(imageFile, holder.getImageView())) {
             BitmapWorkerTask bitmapWorkerTask = new BitmapWorkerTask(holder.getImageView());
             AsyncDrawable asyncDrawable = new AsyncDrawable(holder.getImageView().getResources(),
                     placeHolderBitmap,

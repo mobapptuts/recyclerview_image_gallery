@@ -3,6 +3,7 @@ package nigelhenshaw.com.cameraintenttutorial;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.util.LruCache;
 import android.widget.ImageView;
 
 import java.io.File;
@@ -18,7 +19,6 @@ public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
     final static int TARGET_IMAGE_VIEW_WIDTH = 200;
     final static int TARGET_IMAGE_VIEW_HEIGHT = 200;
     private File mImageFile;
-
     public BitmapWorkerTask(ImageView imageView) {
         imageViewReferences = new WeakReference<ImageView>(imageView);
     }
@@ -27,7 +27,10 @@ public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
     protected Bitmap doInBackground(File... params) {
         // return BitmapFactory.decodeFile(params[0].getAbsolutePath());
         mImageFile = params[0];
-        return decodeBitmapFromFile(params[0]);
+        // return decodeBitmapFromFile(params[0]);
+        Bitmap bitmap = decodeBitmapFromFile(mImageFile);
+        CamaraIntentActivity.setBitmapToMemoryCache(mImageFile.getName(), bitmap);
+        return bitmap;
     }
 
     @Override

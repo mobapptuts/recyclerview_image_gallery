@@ -10,6 +10,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.LruCache;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -29,7 +30,7 @@ public class CamaraIntentActivity extends Activity {
     private String mImageFileLocation = "";
     private String GALLERY_LOCATION = "image gallery";
     private File mGalleryFolder;
-
+    private static LruCache<String, Bitmap> mMemoryCache;
     private RecyclerView mRecyclerView;
 
     @Override
@@ -45,6 +46,16 @@ public class CamaraIntentActivity extends Activity {
         RecyclerView.Adapter imageAdapter = new ImageAdapter(mGalleryFolder);
         mRecyclerView.setAdapter(imageAdapter);
 
+        final int maxMemorySize = (int) Runtime.getRuntime().maxMemory() / 1024;
+        final int cacheSize = maxMemorySize / 10;
+
+        mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
+
+            @Override
+            protected int sizeOf(String key, Bitmap value) {
+                return value.getByteCount() / 1024;
+            }
+        };
     }
 
     @Override
@@ -139,5 +150,15 @@ public class CamaraIntentActivity extends Activity {
         mPhotoCapturedImageView.setImageBitmap(photoReducedSizeBitmp);
 
 
+    }
+
+    public static Bitmap getBitmapFromMemoryCache(String key) {
+        return mMemoryCache.get(key);
+    }
+
+    public static void setBitmapToMemoryCache(String key, Bitmap bitmap) {
+        if(getBitmapFromMemoryCache(key) == null) {
+            mMemoryCache.put(key, bitmap);
+        }
     }
 }
