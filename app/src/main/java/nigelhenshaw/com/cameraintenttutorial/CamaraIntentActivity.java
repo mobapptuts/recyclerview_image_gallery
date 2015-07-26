@@ -19,6 +19,8 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
 
 
@@ -42,7 +44,7 @@ public class CamaraIntentActivity extends Activity {
         mRecyclerView = (RecyclerView) findViewById(R.id.galleryRecyclerView);
         RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 1);
         mRecyclerView.setLayoutManager(layoutManager);
-        RecyclerView.Adapter imageAdapter = new ImageAdapter(mGalleryFolder);
+        RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder));
         mRecyclerView.setAdapter(imageAdapter);
 
     }
@@ -94,7 +96,7 @@ public class CamaraIntentActivity extends Activity {
             // Bitmap photoCapturedBitmap = BitmapFactory.decodeFile(mImageFileLocation);
             // mPhotoCapturedImageView.setImageBitmap(photoCapturedBitmap);
             // setReducedImageSize();
-            RecyclerView.Adapter newImageAdapter = new ImageAdapter(mGalleryFolder);
+            RecyclerView.Adapter newImageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder));
             mRecyclerView.swapAdapter(newImageAdapter, false);
 
         }
@@ -137,7 +139,16 @@ public class CamaraIntentActivity extends Activity {
 
         Bitmap photoReducedSizeBitmp = BitmapFactory.decodeFile(mImageFileLocation, bmOptions);
         mPhotoCapturedImageView.setImageBitmap(photoReducedSizeBitmp);
+    }
 
-
+    private File[] sortFilesToLatest(File fileImagesDir) {
+        File[] files = fileImagesDir.listFiles();
+        Arrays.sort(files, new Comparator<File>() {
+            @Override
+            public int compare(File lhs, File rhs) {
+                return Long.valueOf(rhs.lastModified()).compareTo(lhs.lastModified());
+            }
+        });
+        return files;
     }
 }

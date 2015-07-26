@@ -15,10 +15,10 @@ import java.io.File;
  */
 public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> {
 
-    private File imagesFile;
+    private File[] mImageFiles;
 
-    public ImageAdapter(File folderFile) {
-        imagesFile = folderFile;
+    public ImageAdapter(File[] folderFiles) {
+        mImageFiles= folderFiles;
     }
 
     @Override
@@ -30,14 +30,16 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        File imageFile = imagesFile.listFiles()[position];
+        // File imageFile = imagesFile.listFiles()[position];
+        File imageFile = mImageFiles[position];
         Bitmap imageBitmap = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
         holder.getImageView().setImageBitmap(imageBitmap);
     }
 
     @Override
     public int getItemCount() {
-        return imagesFile.listFiles().length;
+        return mImageFiles.length;
+        // return imagesFile.listFiles().length;
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
