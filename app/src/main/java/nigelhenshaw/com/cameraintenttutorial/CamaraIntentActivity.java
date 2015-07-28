@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.LruCache;
 import android.view.Menu;
@@ -43,7 +44,8 @@ public class CamaraIntentActivity extends Activity {
         createImageGallery();
 
         mRecyclerView = (RecyclerView) findViewById(R.id.galleryRecyclerView);
-        RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 1);
+        GridLayoutManager layoutManager = new GridLayoutManager(this, 1);
+        layoutManager.setOrientation(LinearLayoutManager.HORIZONTAL);
         mRecyclerView.setLayoutManager(layoutManager);
         RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder));
         mRecyclerView.setAdapter(imageAdapter);
