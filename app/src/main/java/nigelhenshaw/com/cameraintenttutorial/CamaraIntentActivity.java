@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -19,8 +20,13 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 
 public class CamaraIntentActivity extends Activity {
@@ -32,6 +38,7 @@ public class CamaraIntentActivity extends Activity {
     private File mGalleryFolder;
     private static LruCache<String, Bitmap> mMemoryCache;
     private RecyclerView mRecyclerView;
+    private static Set<SoftReference<Bitmap>> mReuseableBitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,15 +54,28 @@ public class CamaraIntentActivity extends Activity {
         mRecyclerView.setAdapter(imageAdapter);
 
         final int maxMemorySize = (int) Runtime.getRuntime().maxMemory() / 1024;
-        final int cacheSize = maxMemorySize / 10;
+        final int cacheSize = maxMemorySize / 100;
+        // final int cacheSize = maxMemorySize / 10;
 
         mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
+
+            @Override
+            protected void entryRemoved(boolean evicted, String key, Bitmap oldValue, Bitmap newValue) {
+                super.entryRemoved(evicted, key, oldValue, newValue);
+                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+                    mReuseableBitmap.add(new SoftReference<Bitmap>(oldValue));
+                }
+            }
 
             @Override
             protected int sizeOf(String key, Bitmap value) {
                 return value.getByteCount() / 1024;
             }
         };
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+            mReuseableBitmap = Collections.synchronizedSet(new HashSet<SoftReference<Bitmap>>());
+        }
     }
 
     @Override
@@ -160,5 +180,53 @@ public class CamaraIntentActivity extends Activity {
         if(getBitmapFromMemoryCache(key) == null) {
             mMemoryCache.put(key, bitmap);
         }
+    }
+
+    private static int getBytesPerPixel(Bitmap.Config config) {
+        if(config == Bitmap.Config.ARGB_8888) {
+            return 4;
+        } else if(config == Bitmap.Config.RGB_565) {
+            return 2;
+        } else if(config == Bitmap.Config.ARGB_4444) {
+            return 2;
+        } else if(config == Bitmap.Config.ALPHA_8) {
+            return 1;
+        }
+        return 1;
+    }
+
+    private static boolean canUseForBitmap(Bitmap candidate, BitmapFactory.Options options) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            int width = options.outWidth / options.inSampleSize;
+            int height = options.outHeight / options.inSampleSize;
+            int byteCount = width * height * getBytesPerPixel(candidate.getConfig());
+            return byteCount <= candidate.getAllocationByteCount();
+        }
+        return candidate.getWidth() == options.outWidth &&
+                candidate.getHeight() == options.outHeight &&
+                options.inSampleSize == 1;
+    }
+
+    public static Bitmap getBitmapFromReuseableSet(BitmapFactory.Options options) {
+        Bitmap bitmap = null;
+        if(mReuseableBitmap != null && !mReuseableBitmap.isEmpty()) {
+            synchronized (mReuseableBitmap) {
+                Bitmap item;
+                Iterator<SoftReference<Bitmap>> iterator = mReuseableBitmap.iterator();
+                while(iterator.hasNext()) {
+                    item = iterator.next().get();
+                    if(item != null && item.isMutable()) {
+                        if(canUseForBitmap(item, options)) {
+                            bitmap = item;
+                            iterator.remove();
+                            break;
+                        }
+                    } else {
+                        iterator.remove();
+                    }
+                }
+            }
+        }
+        return bitmap;
     }
 }

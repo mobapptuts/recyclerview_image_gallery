@@ -3,6 +3,7 @@ package nigelhenshaw.com.cameraintenttutorial;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.util.LruCache;
 import android.widget.ImageView;
 
@@ -77,10 +78,21 @@ public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
         BitmapFactory.decodeFile(imageFile.getAbsolutePath(), bmOptions);
         bmOptions.inSampleSize = calculateInSampleSize(bmOptions);
         bmOptions.inJustDecodeBounds = false;
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+            addInBitmapOptions(bmOptions);
+        }
         return BitmapFactory.decodeFile(imageFile.getAbsolutePath(), bmOptions);
     }
 
     public File getImageFile() {
         return mImageFile;
+    }
+
+    private static void addInBitmapOptions(BitmapFactory.Options options) {
+        options.inMutable = true;
+        Bitmap bitmap = CamaraIntentActivity.getBitmapFromReuseableSet(options);
+        if(bitmap != null) {
+            options.inBitmap = bitmap;
+        }
     }
 }
