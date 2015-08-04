@@ -1,9 +1,15 @@
 package nigelhenshaw.com.cameraintenttutorial;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.SurfaceTexture;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -12,8 +18,10 @@ import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.LruCache;
+import android.util.Size;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.TextureView;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.Toast;
@@ -21,9 +29,12 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 
 
 public class CamaraIntentActivity extends Activity {
@@ -35,6 +46,31 @@ public class CamaraIntentActivity extends Activity {
     private File mGalleryFolder;
     private static LruCache<String, Bitmap> mMemoryCache;
     private RecyclerView mRecyclerView;
+    private Size mPreviewSize;
+    private String mCameraId;
+    private TextureView mTextureView;
+    private TextureView.SurfaceTextureListener mSurfaceTextureListener =
+            new TextureView.SurfaceTextureListener() {
+                @Override
+                public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                    setupCamera(width, height);
+                }
+
+                @Override
+                public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+                }
+
+                @Override
+                public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                    return false;
+                }
+
+                @Override
+                public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
+                }
+            };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +96,20 @@ public class CamaraIntentActivity extends Activity {
                 return value.getByteCount() / 1024;
             }
         };
+
+        mTextureView = (TextureView) findViewById(R.id.textureView);
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        if(mTextureView.isAvailable()) {
+
+        } else {
+            mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+        }
+    }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -129,7 +177,7 @@ public class CamaraIntentActivity extends Activity {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         String imageFileName = "IMAGE_" + timeStamp + "_";
 
-        File image = File.createTempFile(imageFileName,".jpg", mGalleryFolder);
+        File image = File.createTempFile(imageFileName, ".jpg", mGalleryFolder);
         mImageFileLocation = image.getAbsolutePath();
 
         return image;
@@ -173,5 +221,50 @@ public class CamaraIntentActivity extends Activity {
         if(getBitmapFromMemoryCache(key) == null) {
             mMemoryCache.put(key, bitmap);
         }
+    }
+
+    private void setupCamera(int width, int height) {
+        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            for(String cameraId : cameraManager.getCameraIdList()) {
+                CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+                if(cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) ==
+                        CameraCharacteristics.LENS_FACING_FRONT){
+                    continue;
+                }
+                StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                mPreviewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
+                mCameraId = cameraId;
+                return;
+            }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Size getPreferredPreviewSize(Size[] mapSizes, int width, int height) {
+        List<Size> collectorSizes = new ArrayList<>();
+        for(Size option : mapSizes) {
+            if(width > height) {
+                if(option.getWidth() > width &&
+                        option.getHeight() > height) {
+                    collectorSizes.add(option);
+                }
+            } else {
+                if(option.getWidth() > height &&
+                        option.getHeight() > width) {
+                    collectorSizes.add(option);
+                }
+            }
+        }
+        if(collectorSizes.size() > 0) {
+            return Collections.min(collectorSizes, new Comparator<Size>() {
+                @Override
+                public int compare(Size lhs, Size rhs) {
+                    return Long.signum(lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight());
+                }
+            });
+        }
+        return mapSizes[0];
     }
 }
