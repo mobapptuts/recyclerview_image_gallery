@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import com.bumptech.glide.Glide;
+import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -57,9 +58,16 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // holder.getImageView().setImageBitmap(imageBitmap);
         // BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         // workerTask.execute(imageFile);
+        Picasso.with(holder.getImageView().getContext())
+                .load(imageFile)
+                .resize(200, 200)
+                .into(holder.getImageView());
+
+        /*
         Glide.with(holder.getImageView().getContext())
                 .load(imageFile)
                 .into(holder.getImageView());
+                */
         /********
         Bitmap bitmap = CamaraIntentActivity.getBitmapFromMemoryCache(imageFile.getName());
         if(bitmap != null) {
