@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.net.Uri;
@@ -54,6 +55,7 @@ public class CamaraIntentActivity extends Activity {
                 @Override
                 public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
                     setupCamera(width, height);
+                    openCamera();
                 }
 
                 @Override
@@ -71,6 +73,27 @@ public class CamaraIntentActivity extends Activity {
 
                 }
             };
+    private CameraDevice mCameraDevice;
+    private CameraDevice.StateCallback mCameraDeviceStateCallback
+            = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(CameraDevice camera) {
+            mCameraDevice = camera;
+            Toast.makeText(getApplicationContext(), "Camera Opened!", Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void onDisconnected(CameraDevice camera) {
+            camera.close();
+            mCameraDevice = null;
+        }
+
+        @Override
+        public void onError(CameraDevice camera, int error) {
+            camera.close();
+            mCameraDevice = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -266,5 +289,14 @@ public class CamaraIntentActivity extends Activity {
             });
         }
         return mapSizes[0];
+    }
+
+    private void openCamera() {
+        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
 }
