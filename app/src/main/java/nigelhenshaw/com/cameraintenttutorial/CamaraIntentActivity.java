@@ -16,6 +16,8 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.provider.MediaStore;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
@@ -108,6 +110,8 @@ public class CamaraIntentActivity extends Activity {
             super.onCaptureStarted(session, request, timestamp, frameNumber);
         }
     };
+    private HandlerThread mBackgroundThread;
+    private Handler mBackgroundHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -141,11 +145,23 @@ public class CamaraIntentActivity extends Activity {
     public void onResume() {
         super.onResume();
 
-        if(mTextureView.isAvailable()) {
+        openBackgroundThread();
 
+        if(mTextureView.isAvailable()) {
+            setupCamera(mTextureView.getWidth(), mTextureView.getHeight());
+            openCamera();
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
+    }
+
+    @Override
+    public void onPause() {
+
+        closeCamera();
+        closeBackgoundThread();
+
+        super.onPause();
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -308,9 +324,21 @@ public class CamaraIntentActivity extends Activity {
     private void openCamera() {
         CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
-            cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, null);
+            cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void closeCamera() {
+
+        if(mCameraCaptureSession != null) {
+            mCameraCaptureSession.close();
+            mCameraCaptureSession = null;
+        }
+        if(mCameraDevice != null) {
+            mCameraDevice.close();
+            mCameraDevice = null;
         }
     }
 
@@ -334,7 +362,7 @@ public class CamaraIntentActivity extends Activity {
                                 mCameraCaptureSession.setRepeatingRequest(
                                         mPreviewCaptureRequest,
                                         mSessionCaptureCallback,
-                                        null
+                                        mBackgroundHandler
                                 );
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
@@ -351,6 +379,23 @@ public class CamaraIntentActivity extends Activity {
                         }
                     }, null);
         } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void openBackgroundThread() {
+        mBackgroundThread = new HandlerThread("Camera2 background thread");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+
+    private void closeBackgoundThread() {
+        mBackgroundThread.quitSafely();
+        try {
+            mBackgroundThread.join();
+            mBackgroundThread = null;
+            mBackgroundHandler = null;
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
