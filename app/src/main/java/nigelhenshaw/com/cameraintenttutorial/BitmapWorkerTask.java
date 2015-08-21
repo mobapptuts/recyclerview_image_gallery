@@ -17,10 +17,12 @@ import java.lang.ref.WeakReference;
 public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
 
     WeakReference<ImageView> imageViewReferences;
-    final static int TARGET_IMAGE_VIEW_WIDTH = 200;
-    final static int TARGET_IMAGE_VIEW_HEIGHT = 200;
+    private static int TARGET_IMAGE_VIEW_WIDTH;
+    private static int TARGET_IMAGE_VIEW_HEIGHT;
     private File mImageFile;
-    public BitmapWorkerTask(ImageView imageView) {
+    public BitmapWorkerTask(ImageView imageView, int imageWidth, int imageHeight) {
+        TARGET_IMAGE_VIEW_WIDTH = imageWidth;
+        TARGET_IMAGE_VIEW_HEIGHT = imageHeight;
         imageViewReferences = new WeakReference<ImageView>(imageView);
     }
 

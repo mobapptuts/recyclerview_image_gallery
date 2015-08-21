@@ -11,6 +11,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.DisplayMetrics;
 import android.util.LruCache;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -39,6 +40,9 @@ public class CamaraIntentActivity extends Activity {
     private static LruCache<String, Bitmap> mMemoryCache;
     private RecyclerView mRecyclerView;
     private static Set<SoftReference<Bitmap>> mReuseableBitmap;
+    private static int mColumnCount = 3;
+    private static int mImageWidth;
+    private static int mImageHeight;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,15 +51,21 @@ public class CamaraIntentActivity extends Activity {
 
         createImageGallery();
 
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        mImageWidth = displayMetrics.widthPixels / mColumnCount;
+        mImageHeight = mImageWidth * 4 / 3;
+
         mRecyclerView = (RecyclerView) findViewById(R.id.galleryRecyclerView);
-        RecyclerView.LayoutManager layoutManager = new GridLayoutManager(this, 1);
+        GridLayoutManager layoutManager = new GridLayoutManager(this, mColumnCount);
         mRecyclerView.setLayoutManager(layoutManager);
-        RecyclerView.Adapter imageAdapter = new ImageAdapter(mGalleryFolder);
+        RecyclerView.Adapter imageAdapter = new ImageAdapter(mGalleryFolder,
+                mImageWidth, mImageHeight);
         mRecyclerView.setAdapter(imageAdapter);
 
         final int maxMemorySize = (int) Runtime.getRuntime().maxMemory() / 1024;
-        final int cacheSize = maxMemorySize / 100;
-        // final int cacheSize = maxMemorySize / 10;
+        // final int cacheSize = maxMemorySize / 100;
+        final int cacheSize = maxMemorySize / 10;
 
         mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
 
@@ -125,7 +135,8 @@ public class CamaraIntentActivity extends Activity {
             // Bitmap photoCapturedBitmap = BitmapFactory.decodeFile(mImageFileLocation);
             // mPhotoCapturedImageView.setImageBitmap(photoCapturedBitmap);
             // setReducedImageSize();
-            RecyclerView.Adapter newImageAdapter = new ImageAdapter(mGalleryFolder);
+            RecyclerView.Adapter newImageAdapter = new ImageAdapter(mGalleryFolder,
+                    mImageWidth, mImageHeight);
             mRecyclerView.swapAdapter(newImageAdapter, false);
 
         }

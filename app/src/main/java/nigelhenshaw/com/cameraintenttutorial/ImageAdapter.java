@@ -10,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import com.bumptech.glide.Glide;
 import com.squareup.picasso.Picasso;
@@ -24,6 +25,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
     private Bitmap placeHolderBitmap;
     private File imagesFile;
+    private static int mImageWidth, mImageHeight;
 
     public static class AsyncDrawable extends BitmapDrawable {
         final WeakReference<BitmapWorkerTask> taskReference;
@@ -40,15 +42,23 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         }
     }
 
-    public ImageAdapter(File folderFile) {
+    public ImageAdapter(File folderFile, int imageWidth, int imageHeight) {
+        mImageWidth = imageWidth;
+        mImageHeight = imageHeight;
         imagesFile = folderFile;
     }
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        /*
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.gallery_images_relative_layout, parent, false);
         return new ViewHolder(view);
+        */
+        ImageView imageView = new ImageView(parent.getContext());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(mImageWidth, mImageHeight);
+        imageView.setLayoutParams(params);
+        return new ViewHolder(imageView);
     }
 
     @Override
@@ -58,30 +68,31 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // holder.getImageView().setImageBitmap(imageBitmap);
         // BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         // workerTask.execute(imageFile);
+        /*
         Picasso.with(holder.getImageView().getContext())
                 .load(imageFile)
                 .resize(200, 200)
                 .into(holder.getImageView());
+        */
 
         /*
         Glide.with(holder.getImageView().getContext())
                 .load(imageFile)
                 .into(holder.getImageView());
                 */
-        /********
         Bitmap bitmap = CamaraIntentActivity.getBitmapFromMemoryCache(imageFile.getName());
         if(bitmap != null) {
             holder.getImageView().setImageBitmap(bitmap);
         }
         else if(checkBitmapWorkerTask(imageFile, holder.getImageView())) {
-            BitmapWorkerTask bitmapWorkerTask = new BitmapWorkerTask(holder.getImageView());
+            BitmapWorkerTask bitmapWorkerTask = new BitmapWorkerTask(holder.getImageView(),
+                    mImageWidth, mImageHeight);
             AsyncDrawable asyncDrawable = new AsyncDrawable(holder.getImageView().getResources(),
                     placeHolderBitmap,
                     bitmapWorkerTask);
             holder.getImageView().setImageDrawable(asyncDrawable);
             bitmapWorkerTask.execute(imageFile);
         }
-         */
     }
 
     @Override
@@ -95,7 +106,8 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         public ViewHolder(View view) {
             super(view);
 
-            imageView = (ImageView) view.findViewById(R.id.imageGalleryView);
+            //imageView = (ImageView) view.findViewById(R.id.imageGalleryView);
+            imageView = (ImageView) view;
         }
 
         public ImageView getImageView() {
