@@ -57,18 +57,18 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
                 .inflate(R.layout.gallery_images_relative_layout, parent, false);
         return new ViewHolder(view);
         */
-        /*
         ImageView imageView = new ImageView(parent.getContext());
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(mImageWidth, mImageHeight);
         imageView.setLayoutParams(params);
         return new ViewHolder(imageView);
-        */
+        /*
         SimpleDraweeView simpleDraweeView = new SimpleDraweeView(parent.getContext());
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 mImageWidth, mImageHeight
         );
         simpleDraweeView.setLayoutParams(params);
         return new ViewHolder(simpleDraweeView);
+        */
     }
 
     @Override
@@ -78,19 +78,17 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // holder.getImageView().setImageBitmap(imageBitmap);
         // BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         // workerTask.execute(imageFile);
-        holder.getSimpleDraweeView().setImageURI(Uri.fromFile(imageFile));
+        // holder.getSimpleDraweeView().setImageURI(Uri.fromFile(imageFile));
         /*
         Picasso.with(holder.getImageView().getContext())
                 .load(imageFile)
-                .resize(200, 200)
+                .resize(mImageWidth, mImageHeight)
                 .into(holder.getImageView());
-        */
+                */
 
-        /*
         Glide.with(holder.getImageView().getContext())
                 .load(imageFile)
                 .into(holder.getImageView());
-                */
         /*
         Bitmap bitmap = CamaraIntentActivity.getBitmapFromMemoryCache(imageFile.getName());
         if(bitmap != null) {
@@ -113,7 +111,6 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         return imagesFile.listFiles().length;
     }
 
-    /*
     public static class ViewHolder extends RecyclerView.ViewHolder {
         private ImageView imageView;
 
@@ -128,7 +125,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
             return imageView;
         }
     }
-    */
+    /*
     public static class ViewHolder extends RecyclerView.ViewHolder {
         private SimpleDraweeView simpleDraweeView;
 
@@ -143,6 +140,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
             return simpleDraweeView;
         }
     }
+    */
 
     public static boolean checkBitmapWorkerTask(File imageFile, ImageView imageView) {
         BitmapWorkerTask bitmapWorkerTask = getBitmapWorkerTask(imageView);
