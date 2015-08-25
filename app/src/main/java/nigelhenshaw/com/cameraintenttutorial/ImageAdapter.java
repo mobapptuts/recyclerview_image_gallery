@@ -79,16 +79,15 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         // workerTask.execute(imageFile);
         // holder.getSimpleDraweeView().setImageURI(Uri.fromFile(imageFile));
-        /*
         Picasso.with(holder.getImageView().getContext())
                 .load(imageFile)
                 .resize(mImageWidth, mImageHeight)
                 .into(holder.getImageView());
-                */
-
+        /*
         Glide.with(holder.getImageView().getContext())
                 .load(imageFile)
                 .into(holder.getImageView());
+         */
         /*
         Bitmap bitmap = CamaraIntentActivity.getBitmapFromMemoryCache(imageFile.getName());
         if(bitmap != null) {
