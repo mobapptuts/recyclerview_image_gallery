@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,6 +14,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import com.bumptech.glide.Glide;
+import com.facebook.drawee.view.SimpleDraweeView;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
@@ -55,10 +57,18 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
                 .inflate(R.layout.gallery_images_relative_layout, parent, false);
         return new ViewHolder(view);
         */
+        /*
         ImageView imageView = new ImageView(parent.getContext());
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(mImageWidth, mImageHeight);
         imageView.setLayoutParams(params);
         return new ViewHolder(imageView);
+        */
+        SimpleDraweeView simpleDraweeView = new SimpleDraweeView(parent.getContext());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                mImageWidth, mImageHeight
+        );
+        simpleDraweeView.setLayoutParams(params);
+        return new ViewHolder(simpleDraweeView);
     }
 
     @Override
@@ -68,6 +78,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // holder.getImageView().setImageBitmap(imageBitmap);
         // BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         // workerTask.execute(imageFile);
+        holder.getSimpleDraweeView().setImageURI(Uri.fromFile(imageFile));
         /*
         Picasso.with(holder.getImageView().getContext())
                 .load(imageFile)
@@ -80,6 +91,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
                 .load(imageFile)
                 .into(holder.getImageView());
                 */
+        /*
         Bitmap bitmap = CamaraIntentActivity.getBitmapFromMemoryCache(imageFile.getName());
         if(bitmap != null) {
             holder.getImageView().setImageBitmap(bitmap);
@@ -93,6 +105,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
             holder.getImageView().setImageDrawable(asyncDrawable);
             bitmapWorkerTask.execute(imageFile);
         }
+        */
     }
 
     @Override
@@ -100,6 +113,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         return imagesFile.listFiles().length;
     }
 
+    /*
     public static class ViewHolder extends RecyclerView.ViewHolder {
         private ImageView imageView;
 
@@ -112,6 +126,21 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
         public ImageView getImageView() {
             return imageView;
+        }
+    }
+    */
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        private SimpleDraweeView simpleDraweeView;
+
+        public ViewHolder(View view) {
+            super(view);
+
+            //imageView = (ImageView) view.findViewById(R.id.imageGalleryView);
+            simpleDraweeView = (SimpleDraweeView) view;
+        }
+
+        public SimpleDraweeView getSimpleDraweeView() {
+            return simpleDraweeView;
         }
     }
 
