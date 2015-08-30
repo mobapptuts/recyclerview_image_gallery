@@ -11,7 +11,10 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -46,6 +49,9 @@ import java.util.List;
 public class CamaraIntentActivity extends Activity {
 
     private static final int ACTIVITY_START_CAMERA_APP = 0;
+    private static final int STATE_PREVIEW = 0;
+    private static final int STATE__WAIT_LOCK = 1;
+    private int mState;
     private ImageView mPhotoCapturedImageView;
     private String mImageFileLocation = "";
     private String GALLERY_LOCATION = "image gallery";
@@ -105,9 +111,38 @@ public class CamaraIntentActivity extends Activity {
     private CameraCaptureSession mCameraCaptureSession;
     private CameraCaptureSession.CaptureCallback mSessionCaptureCallback
             = new CameraCaptureSession.CaptureCallback() {
+
+        private void process(CaptureResult result) {
+            switch(mState) {
+                case STATE_PREVIEW:
+                    // Do nothing
+                    break;
+                case STATE__WAIT_LOCK:
+                    Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
+                    if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED) {
+                        unLockFocus();
+                        Toast.makeText(getApplicationContext(), "Focus Lock Successful", Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+            }
+        }
         @Override
         public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
             super.onCaptureStarted(session, request, timestamp, frameNumber);
+        }
+
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+            super.onCaptureCompleted(session, request, result);
+
+            process(result);
+        }
+
+        @Override
+        public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+            super.onCaptureFailed(session, request, failure);
+
+            Toast.makeText(getApplicationContext(), "Focus Lock Unsuccessful", Toast.LENGTH_SHORT).show();
         }
     };
     private HandlerThread mBackgroundThread;
@@ -186,9 +221,9 @@ public class CamaraIntentActivity extends Activity {
     }
 
     public void takePhoto(View view) {
+        /*
         Intent callCameraApplicationIntent = new Intent();
         callCameraApplicationIntent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
-
         File photoFile = null;
         try {
            photoFile = createImageFile();
@@ -197,8 +232,9 @@ public class CamaraIntentActivity extends Activity {
             e.printStackTrace();
         }
         callCameraApplicationIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
-
         startActivityForResult(callCameraApplicationIntent, ACTIVITY_START_CAMERA_APP);
+        */
+        lockFocus();
     }
 
     protected void onActivityResult (int requestCode, int resultCode, Intent data) {
@@ -396,6 +432,30 @@ public class CamaraIntentActivity extends Activity {
             mBackgroundThread = null;
             mBackgroundHandler = null;
         } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void lockFocus() {
+        try {
+            mState = STATE__WAIT_LOCK;
+            mPreviewCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                    CaptureRequest.CONTROL_AF_TRIGGER_START);
+            mCameraCaptureSession.capture(mPreviewCaptureRequestBuilder.build(),
+                    mSessionCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void unLockFocus() {
+        try {
+            mState = STATE_PREVIEW;
+            mPreviewCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                    CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
+            mCameraCaptureSession.capture(mPreviewCaptureRequestBuilder.build(),
+                    mSessionCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }

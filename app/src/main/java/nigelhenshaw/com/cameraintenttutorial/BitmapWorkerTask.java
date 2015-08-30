@@ -48,9 +48,11 @@ public class BitmapWorkerTask extends AsyncTask<File, Void, Bitmap> {
         }
         if(bitmap != null && imageViewReferences != null) {
             ImageView imageView = imageViewReferences.get();
-            BitmapWorkerTask bitmapWorkerTask = ImageAdapter.getBitmapWorkerTask(imageView);
-            if(this == bitmapWorkerTask && imageView != null){
-                imageView.setImageBitmap(bitmap);
+            if(imageView != null) {
+                BitmapWorkerTask bitmapWorkerTask = ImageAdapter.getBitmapWorkerTask(imageView);
+                if(this == bitmapWorkerTask && imageView != null){
+                    imageView.setImageBitmap(bitmap);
+                }
             }
         }
     }
