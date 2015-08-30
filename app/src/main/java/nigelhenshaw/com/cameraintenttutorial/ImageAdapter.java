@@ -15,6 +15,7 @@ import android.widget.LinearLayout;
 
 import com.bumptech.glide.Glide;
 import com.facebook.drawee.view.SimpleDraweeView;
+import com.nostra13.universalimageloader.core.ImageLoader;
 import com.squareup.picasso.Picasso;
 
 import java.io.File;
@@ -79,10 +80,13 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // BitmapWorkerTask workerTask = new BitmapWorkerTask(holder.getImageView());
         // workerTask.execute(imageFile);
         // holder.getSimpleDraweeView().setImageURI(Uri.fromFile(imageFile));
+        ImageLoader.getInstance().displayImage(Uri.parse("file://" + imageFile.toString()).toString(), holder.getImageView());
+        /*
         Picasso.with(holder.getImageView().getContext())
                 .load(imageFile)
                 .resize(mImageWidth, mImageHeight)
                 .into(holder.getImageView());
+                */
         /*
         Glide.with(holder.getImageView().getContext())
                 .load(imageFile)
