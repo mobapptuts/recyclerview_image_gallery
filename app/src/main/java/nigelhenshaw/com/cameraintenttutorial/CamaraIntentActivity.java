@@ -51,7 +51,7 @@ public class CamaraIntentActivity extends Activity {
     private static final int ACTIVITY_START_CAMERA_APP = 0;
     private static final int STATE_PREVIEW = 0;
     private static final int STATE__WAIT_LOCK = 1;
-    private int mState;
+    private int mState = STATE_PREVIEW;
     private ImageView mPhotoCapturedImageView;
     private String mImageFileLocation = "";
     private String GALLERY_LOCATION = "image gallery";
