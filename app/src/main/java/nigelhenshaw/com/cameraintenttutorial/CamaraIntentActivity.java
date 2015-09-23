@@ -30,6 +30,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.LruCache;
 import android.util.Size;
+import android.util.SparseIntArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Surface;
@@ -52,6 +53,14 @@ import java.util.List;
 
 
 public class CamaraIntentActivity extends Activity {
+
+    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+    static {
+        ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        ORIENTATIONS.append(Surface.ROTATION_180, 270);
+        ORIENTATIONS.append(Surface.ROTATION_270, 180);
+    }
 
     private static final int ACTIVITY_START_CAMERA_APP = 0;
     private static final int STATE_PREVIEW = 0;
@@ -125,8 +134,11 @@ public class CamaraIntentActivity extends Activity {
                 case STATE__WAIT_LOCK:
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
                     if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED) {
+                        /*
                         unLockFocus();
                         Toast.makeText(getApplicationContext(), "Focus Lock Successful", Toast.LENGTH_SHORT).show();
+                        */
+                        captureStillImage();
                     }
                     break;
             }
@@ -449,6 +461,10 @@ public class CamaraIntentActivity extends Activity {
             mCameraDevice.close();
             mCameraDevice = null;
         }
+        if(mImageReader != null) {
+            mImageReader.close();
+            mImageReader = null;
+        }
     }
 
     private void createCameraPreviewSession() {
@@ -458,7 +474,7 @@ public class CamaraIntentActivity extends Activity {
             Surface previewSurface = new Surface(surfaceTexture);
             mPreviewCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewCaptureRequestBuilder.addTarget(previewSurface);
-            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface),
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
@@ -528,6 +544,36 @@ public class CamaraIntentActivity extends Activity {
                     CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
             mCameraCaptureSession.capture(mPreviewCaptureRequestBuilder.build(),
                     mSessionCaptureCallback, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void captureStillImage() {
+        try {
+            CaptureRequest.Builder captureStillBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureStillBuilder.addTarget(mImageReader.getSurface());
+
+            int rotation = getWindowManager().getDefaultDisplay().getRotation();
+            captureStillBuilder.set(CaptureRequest.JPEG_ORIENTATION,
+                    ORIENTATIONS.get(rotation));
+
+            CameraCaptureSession.CaptureCallback captureCallback =
+                    new CameraCaptureSession.CaptureCallback() {
+                        @Override
+                        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+                            super.onCaptureCompleted(session, request, result);
+
+                            Toast.makeText(getApplicationContext(),
+                                    "Image Captured!", Toast.LENGTH_SHORT).show();
+                            unLockFocus();
+                        }
+                    };
+
+            mCameraCaptureSession.capture(
+                    captureStillBuilder.build(), captureCallback, null
+            );
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
