@@ -52,7 +52,7 @@ import java.util.Date;
 import java.util.List;
 
 
-public class CamaraIntentActivity extends Activity {
+public class CamaraIntentActivity extends Activity implements RecyclerViewClickPositionInterface {
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
@@ -174,6 +174,13 @@ public class CamaraIntentActivity extends Activity {
                }
            };
 
+    @Override
+    public void getRecyclerViewAdapterPosition(int position) {
+
+        Toast.makeText(this, Integer.toString(position), Toast.LENGTH_SHORT).show();
+
+    }
+
     private static class ImageSaver implements Runnable {
 
         private final Image mImage;
@@ -220,7 +227,7 @@ public class CamaraIntentActivity extends Activity {
         GridLayoutManager layoutManager = new GridLayoutManager(this, 1);
         layoutManager.setOrientation(LinearLayoutManager.HORIZONTAL);
         mRecyclerView.setLayoutManager(layoutManager);
-        RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder));
+        RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder), this);
         mRecyclerView.setAdapter(imageAdapter);
 
         final int maxMemorySize = (int) Runtime.getRuntime().maxMemory() / 1024;
@@ -313,7 +320,7 @@ public class CamaraIntentActivity extends Activity {
             // Bitmap photoCapturedBitmap = BitmapFactory.decodeFile(mImageFileLocation);
             // mPhotoCapturedImageView.setImageBitmap(photoCapturedBitmap);
             // setReducedImageSize();
-            RecyclerView.Adapter newImageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder));
+            RecyclerView.Adapter newImageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder), this);
             mRecyclerView.swapAdapter(newImageAdapter, false);
 
         }
@@ -550,7 +557,7 @@ public class CamaraIntentActivity extends Activity {
     }
 
     private void swapImageAdapter() {
-        RecyclerView.Adapter newImageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder));
+        RecyclerView.Adapter newImageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder), this);
         mRecyclerView.swapAdapter(newImageAdapter, false);
     }
 

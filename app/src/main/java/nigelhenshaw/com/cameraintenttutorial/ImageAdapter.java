@@ -21,6 +21,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
     private Bitmap placeHolderBitmap;
     private File[] mImageFiles;
+    private static RecyclerViewClickPositionInterface mPositionInterface;
 
     public static class AsyncDrawable extends BitmapDrawable {
         final WeakReference<BitmapWorkerTask> taskReference;
@@ -37,7 +38,8 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         }
     }
 
-    public ImageAdapter(File[] folderFiles) {
+    public ImageAdapter(File[] folderFiles, RecyclerViewClickPositionInterface positionInterface) {
+        mPositionInterface = positionInterface;
         mImageFiles= folderFiles;
     }
 
@@ -76,17 +78,23 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
         // return imagesFile.listFiles().length;
     }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         private ImageView imageView;
 
         public ViewHolder(View view) {
             super(view);
 
+            view.setOnClickListener(this);
             imageView = (ImageView) view.findViewById(R.id.imageGalleryView);
         }
 
         public ImageView getImageView() {
             return imageView;
+        }
+
+        @Override
+        public void onClick(View v) {
+            mPositionInterface.getRecyclerViewAdapterPosition(this.getPosition());
         }
     }
 
