@@ -549,7 +549,15 @@ public class CamaraIntentActivity extends Activity {
         }
     }
 
+    private void swapImageAdapter() {
+        RecyclerView.Adapter newImageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder));
+        mRecyclerView.swapAdapter(newImageAdapter, false);
+    }
+
     private void captureStillImage() {
+
+        Handler uiHandler = new Handler(getMainLooper());
+
         try {
             CaptureRequest.Builder captureStillBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureStillBuilder.addTarget(mImageReader.getSurface());
@@ -564,14 +572,17 @@ public class CamaraIntentActivity extends Activity {
                         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                             super.onCaptureCompleted(session, request, result);
 
+                            swapImageAdapter();
+                            /*
                             Toast.makeText(getApplicationContext(),
                                     "Image Captured!", Toast.LENGTH_SHORT).show();
+                            */
                             unLockFocus();
                         }
                     };
 
             mCameraCaptureSession.capture(
-                    captureStillBuilder.build(), captureCallback, null
+                    captureStillBuilder.build(), captureCallback, uiHandler
             );
 
         } catch (CameraAccessException e) {
