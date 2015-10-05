@@ -62,6 +62,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
+    private static final String IMAGE_FILE_LOCATION = "image_file_location";
     private static final int ACTIVITY_START_CAMERA_APP = 0;
     private static final int STATE_PREVIEW = 0;
     private static final int STATE__WAIT_LOCK = 1;
@@ -177,7 +178,11 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
     @Override
     public void getRecyclerViewAdapterPosition(int position) {
 
-        Toast.makeText(this, Integer.toString(position), Toast.LENGTH_SHORT).show();
+        // Toast.makeText(this, Integer.toString(position), Toast.LENGTH_SHORT).show();
+        Intent sendFileAddressIntent = new Intent(this, SingleImageActivity.class);
+        sendFileAddressIntent.putExtra(IMAGE_FILE_LOCATION,
+                sortFilesToLatest(mGalleryFolder)[position].toString());
+        startActivity(sendFileAddressIntent);
 
     }
 
