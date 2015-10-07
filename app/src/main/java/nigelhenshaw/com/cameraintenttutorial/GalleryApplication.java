@@ -12,6 +12,6 @@ public class GalleryApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
-        Fresco.initialize(this);
+        // Fresco.initialize(this);
     }
 }
