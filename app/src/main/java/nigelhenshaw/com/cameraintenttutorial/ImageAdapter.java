@@ -28,7 +28,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ViewHolder> 
 
     private Bitmap placeHolderBitmap;
     private File imagesFile;
-    private static int mImageWidth, mImageHeight;
+    private final int mImageWidth, mImageHeight;
 
     public static class AsyncDrawable extends BitmapDrawable {
         final WeakReference<BitmapWorkerTask> taskReference;

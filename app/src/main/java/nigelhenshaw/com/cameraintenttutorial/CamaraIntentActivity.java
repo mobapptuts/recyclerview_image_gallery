@@ -40,9 +40,9 @@ public class CamaraIntentActivity extends Activity {
     private static LruCache<String, Bitmap> mMemoryCache;
     private RecyclerView mRecyclerView;
     private static Set<SoftReference<Bitmap>> mReuseableBitmap;
-    private static int mColumnCount = 3;
-    private static int mImageWidth;
-    private static int mImageHeight;
+    private int mColumnCount = 3;
+    private int mImageWidth;
+    private int mImageHeight;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +65,8 @@ public class CamaraIntentActivity extends Activity {
 
         final int maxMemorySize = (int) Runtime.getRuntime().maxMemory() / 1024;
         // final int cacheSize = maxMemorySize / 100;
-        final int cacheSize = maxMemorySize / 10;
+        // final int cacheSize = maxMemorySize / 10;
+        final int cacheSize = maxMemorySize / 1;
 
         mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
 
