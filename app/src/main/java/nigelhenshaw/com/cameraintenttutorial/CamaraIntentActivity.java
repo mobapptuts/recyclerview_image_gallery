@@ -65,7 +65,8 @@ public class CamaraIntentActivity extends Activity {
 
         final int maxMemorySize = (int) Runtime.getRuntime().maxMemory() / 1024;
         // final int cacheSize = maxMemorySize / 100;
-        final int cacheSize = maxMemorySize / 10;
+        // final int cacheSize = maxMemorySize / 10;
+        final int cacheSize = maxMemorySize / 1;
 
         mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
 
