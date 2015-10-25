@@ -221,6 +221,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                     }
                 }
                 if(mRequestingAppUri != null) {
+                    mRequestingAppUri = null;
                     mActivity.setResult(RESULT_OK);
                     mActivity.finish();
                 }
