@@ -171,9 +171,11 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
            new ImageReader.OnImageAvailableListener() {
                @Override
                public void onImageAvailable(ImageReader reader) {
-                   mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage()));
+                   mBackgroundHandler.post(new ImageSaver(mActivity, reader.acquireNextImage()));
                }
            };
+    private static Uri mRequestingAppUri;
+    private Activity mActivity;
 
     @Override
     public void getRecyclerViewAdapterPosition(int position) {
@@ -189,8 +191,10 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
     private static class ImageSaver implements Runnable {
 
         private final Image mImage;
+        private final Activity mActivity;
 
-        private ImageSaver(Image image) {
+        private ImageSaver(Activity activity, Image image) {
+            mActivity = activity;
             mImage = image;
         }
 
@@ -216,6 +220,10 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                         e.printStackTrace();
                     }
                 }
+                if(mRequestingAppUri != null) {
+                    mActivity.setResult(RESULT_OK);
+                    mActivity.finish();
+                }
             }
 
         }
@@ -225,6 +233,13 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camara_intent);
+
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        if(MediaStore.ACTION_IMAGE_CAPTURE.equals(action)) {
+            mRequestingAppUri = intent.getParcelableExtra(MediaStore.EXTRA_OUTPUT);
+        }
+        mActivity = this;
 
         createImageGallery();
 
@@ -308,7 +323,12 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         startActivityForResult(callCameraApplicationIntent, ACTIVITY_START_CAMERA_APP);
         */
         try {
-            mImageFile = createImageFile();
+            if(mRequestingAppUri != null) {
+                mImageFile = new File(mRequestingAppUri.getPath());
+            } else {
+                mImageFile = createImageFile();
+            }
+
 
         } catch (IOException e) {
             e.printStackTrace();

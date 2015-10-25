@@ -5,7 +5,7 @@ android {
     buildToolsVersion "22.0.1"
 
     defaultConfig {
-        applicationId "nigelhenshaw.com.cameraintenttutorial"
+        applicationId "com.nigelhenshaw.camera2apiapp"
         minSdkVersion 21
         targetSdkVersion 22
         versionCode 1
