@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -81,6 +83,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                 @Override
                 public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
                     setupCamera(width, height);
+                    transformImage(width, height);
                     openCamera();
                 }
 
@@ -273,6 +276,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
 
         if(mTextureView.isAvailable()) {
             setupCamera(mTextureView.getWidth(), mTextureView.getHeight());
+            transformImage(mTextureView.getWidth(), mTextureView.getHeight());
             openCamera();
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
@@ -621,5 +625,27 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    private void transformImage(int width, int height) {
+        if(mPreviewSize == null || mTextureView == null) {
+            return;
+        }
+        Matrix matrix = new Matrix();
+        int rotation = getWindowManager().getDefaultDisplay().getRotation();
+        RectF textureRectF = new RectF(0, 0, width, height);
+        RectF previewRectF = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+        float centerX = textureRectF.centerX();
+        float centerY = textureRectF.centerY();
+        if(rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+            previewRectF.offset(centerX - previewRectF.centerX(),
+                    centerY - previewRectF.centerY());
+            matrix.setRectToRect(textureRectF, previewRectF, Matrix.ScaleToFit.FILL);
+            float scale = Math.max((float)width / mPreviewSize.getWidth(),
+                    (float)height / mPreviewSize.getHeight());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        }
+        mTextureView.setTransform(matrix);
     }
 }
