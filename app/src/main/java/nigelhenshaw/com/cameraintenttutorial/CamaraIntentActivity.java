@@ -26,6 +26,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
@@ -68,6 +70,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
     private static final int ACTIVITY_START_CAMERA_APP = 0;
     private static final int STATE_PREVIEW = 0;
     private static final int STATE__WAIT_LOCK = 1;
+    private static final int STATE__PICTURE_CAPTURED = 2;
     private int mState = STATE_PREVIEW;
     private ImageView mPhotoCapturedImageView;
     private String mImageFileLocation = "";
@@ -142,6 +145,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                         unLockFocus();
                         Toast.makeText(getApplicationContext(), "Focus Lock Successful", Toast.LENGTH_SHORT).show();
                         */
+                        mState = STATE__PICTURE_CAPTURED;
                         captureStillImage();
                     }
                     break;
@@ -168,13 +172,22 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
     };
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
+    private final Handler mUiHandler = new Handler(Looper.getMainLooper()) {
+
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+
+            swapImageAdapter();
+        }
+    };
     private static File mImageFile;
     private ImageReader mImageReader;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener =
            new ImageReader.OnImageAvailableListener() {
                @Override
                public void onImageAvailable(ImageReader reader) {
-                   mBackgroundHandler.post(new ImageSaver(mActivity, reader.acquireNextImage()));
+                   mBackgroundHandler.post(new ImageSaver(mActivity, reader.acquireNextImage(), mUiHandler));
                }
            };
     private static Uri mRequestingAppUri;
@@ -195,10 +208,12 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
 
         private final Image mImage;
         private final Activity mActivity;
+        private final Handler mHandler;
 
-        private ImageSaver(Activity activity, Image image) {
+        private ImageSaver(Activity activity, Image image, Handler handler) {
             mActivity = activity;
             mImage = image;
+            mHandler = handler;
         }
 
         @Override
@@ -228,6 +243,8 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                     mActivity.setResult(RESULT_OK);
                     mActivity.finish();
                 }
+                Message message = mHandler.obtainMessage();
+                message.sendToTarget();
             }
 
         }
@@ -327,17 +344,6 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         callCameraApplicationIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
         startActivityForResult(callCameraApplicationIntent, ACTIVITY_START_CAMERA_APP);
         */
-        try {
-            if(mRequestingAppUri != null) {
-                mImageFile = new File(mRequestingAppUri.getPath());
-            } else {
-                mImageFile = createImageFile();
-            }
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         lockFocus();
     }
 
@@ -579,7 +585,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
             mState = STATE_PREVIEW;
             mPreviewCaptureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
                     CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
-            mCameraCaptureSession.capture(mPreviewCaptureRequestBuilder.build(),
+            mCameraCaptureSession.setRepeatingRequest(mPreviewCaptureRequestBuilder.build(),
                     mSessionCaptureCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -593,8 +599,6 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
 
     private void captureStillImage() {
 
-        Handler uiHandler = new Handler(getMainLooper());
-
         try {
             CaptureRequest.Builder captureStillBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureStillBuilder.addTarget(mImageReader.getSurface());
@@ -606,10 +610,26 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
             CameraCaptureSession.CaptureCallback captureCallback =
                     new CameraCaptureSession.CaptureCallback() {
                         @Override
+                        public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
+                            super.onCaptureStarted(session, request, timestamp, frameNumber);
+
+                            try {
+                                if(mRequestingAppUri != null) {
+                                    mImageFile = new File(mRequestingAppUri.getPath());
+                                } else {
+                                    mImageFile = createImageFile();
+                                }
+
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
                         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                             super.onCaptureCompleted(session, request, result);
 
-                            swapImageAdapter();
                             /*
                             Toast.makeText(getApplicationContext(),
                                     "Image Captured!", Toast.LENGTH_SHORT).show();
@@ -618,8 +638,9 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                         }
                     };
 
+            mCameraCaptureSession.stopRepeating();
             mCameraCaptureSession.capture(
-                    captureStillBuilder.build(), captureCallback, uiHandler
+                    captureStillBuilder.build(), captureCallback, null
             );
 
         } catch (CameraAccessException e) {
