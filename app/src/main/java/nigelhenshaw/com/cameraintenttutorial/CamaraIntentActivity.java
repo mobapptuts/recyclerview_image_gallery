@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Camera;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
@@ -17,6 +18,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.DngCreator;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
@@ -74,12 +76,14 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
     private int mState = STATE_PREVIEW;
     private ImageView mPhotoCapturedImageView;
     private String mImageFileLocation = "";
-    private String GALLERY_LOCATION = "image gallery";
     private File mGalleryFolder;
+    private File mRawGalleryFolder;
     private static LruCache<String, Bitmap> mMemoryCache;
     private RecyclerView mRecyclerView;
     private Size mPreviewSize;
     private String mCameraId;
+    private CameraCharacteristics mCameraCharacteristics;
+    private CaptureResult mCaptureResult;
     private TextureView mTextureView;
     private TextureView.SurfaceTextureListener mSurfaceTextureListener =
             new TextureView.SurfaceTextureListener() {
@@ -140,7 +144,8 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                     break;
                 case STATE__WAIT_LOCK:
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
-                    if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED) {
+                    if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                    afState == CaptureRequest.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
                         /*
                         unLockFocus();
                         Toast.makeText(getApplicationContext(), "Focus Lock Successful", Toast.LENGTH_SHORT).show();
@@ -182,12 +187,23 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         }
     };
     private static File mImageFile;
+    private static File mRawImageFile;
     private ImageReader mImageReader;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener =
+            new ImageReader.OnImageAvailableListener() {
+                @Override
+                public void onImageAvailable(ImageReader reader) {
+                    mBackgroundHandler.post(new ImageSaver(mActivity, reader.acquireNextImage(), mUiHandler,
+                            mCaptureResult, mCameraCharacteristics));
+                }
+            };
+    private ImageReader mRawImageReader;
+    private final ImageReader.OnImageAvailableListener mOnRawImageAvailableListener =
            new ImageReader.OnImageAvailableListener() {
                @Override
                public void onImageAvailable(ImageReader reader) {
-                   mBackgroundHandler.post(new ImageSaver(mActivity, reader.acquireNextImage(), mUiHandler));
+                   mBackgroundHandler.post(new ImageSaver(mActivity, reader.acquireNextImage(), mUiHandler,
+                           mCaptureResult, mCameraCharacteristics));
                }
            };
     private static Uri mRequestingAppUri;
@@ -209,42 +225,72 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         private final Image mImage;
         private final Activity mActivity;
         private final Handler mHandler;
+        private final CaptureResult mCaptureResult;
+        private final CameraCharacteristics mCameraCharacteristics;
 
-        private ImageSaver(Activity activity, Image image, Handler handler) {
+        private ImageSaver(Activity activity, Image image, Handler handler, CaptureResult captureResult,
+                           CameraCharacteristics cameraCharacteristics) {
             mActivity = activity;
             mImage = image;
             mHandler = handler;
+            mCaptureResult = captureResult;
+            mCameraCharacteristics = cameraCharacteristics;
         }
 
         @Override
         public void run() {
-            ByteBuffer byteBuffer = mImage.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[byteBuffer.remaining()];
-            byteBuffer.get(bytes);
+            int format = mImage.getFormat();
+            switch(format) {
+                case ImageFormat.JPEG:
+                    ByteBuffer byteBuffer = mImage.getPlanes()[0].getBuffer();
+                    byte[] bytes = new byte[byteBuffer.remaining()];
+                    byteBuffer.get(bytes);
 
-            FileOutputStream fileOutputStream = null;
+                    FileOutputStream fileOutputStream = null;
 
-            try {
-                fileOutputStream = new FileOutputStream(mImageFile);
-                fileOutputStream.write(bytes);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                mImage.close();
-                if(fileOutputStream != null) {
                     try {
-                        fileOutputStream.close();
+                        fileOutputStream = new FileOutputStream(mImageFile);
+                        fileOutputStream.write(bytes);
                     } catch (IOException e) {
                         e.printStackTrace();
+                    } finally {
+                        mImage.close();
+                        if(fileOutputStream != null) {
+                            try {
+                                fileOutputStream.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        if(mRequestingAppUri != null) {
+                            mRequestingAppUri = null;
+                            mActivity.setResult(RESULT_OK);
+                            mActivity.finish();
+                        }
+                        Message message = mHandler.obtainMessage();
+                        message.sendToTarget();
                     }
-                }
-                if(mRequestingAppUri != null) {
-                    mRequestingAppUri = null;
-                    mActivity.setResult(RESULT_OK);
-                    mActivity.finish();
-                }
-                Message message = mHandler.obtainMessage();
-                message.sendToTarget();
+                    break;
+                case ImageFormat.RAW_SENSOR:
+                    DngCreator dngCreator = new DngCreator(mCameraCharacteristics, mCaptureResult);
+                    FileOutputStream rawFileOutputStream = null;
+                    try {
+                        rawFileOutputStream = new FileOutputStream(mRawImageFile);
+                        dngCreator.writeImage(rawFileOutputStream, mImage);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        mImage.close();
+                        if(rawFileOutputStream != null) {
+                            try {
+                                rawFileOutputStream.close();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    break;
             }
 
         }
@@ -364,19 +410,34 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
 
     private void createImageGallery() {
         File storageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-        mGalleryFolder = new File(storageDirectory, GALLERY_LOCATION);
+        mGalleryFolder = new File(storageDirectory, "JPEG Images");
+        mRawGalleryFolder = new File(storageDirectory, "Raw Images");
         if(!mGalleryFolder.exists()) {
             mGalleryFolder.mkdirs();
         }
-
+        if(!mRawGalleryFolder.exists()) {
+            mRawGalleryFolder.mkdirs();
+        }
     }
 
     File createImageFile() throws IOException {
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "IMAGE_" + timeStamp + "_";
+        String imageFileName = "JPEG_" + timeStamp + "_";
 
         File image = File.createTempFile(imageFileName, ".jpg", mGalleryFolder);
+        mImageFileLocation = image.getAbsolutePath();
+
+        return image;
+
+    }
+
+    File createRawImageFile() throws IOException {
+
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "RAW_" + timeStamp + "_";
+
+        File image = File.createTempFile(imageFileName, ".dng", mRawGalleryFolder);
         mImageFileLocation = image.getAbsolutePath();
 
         return image;
@@ -427,6 +488,10 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         try {
             for(String cameraId : cameraManager.getCameraIdList()) {
                 CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraId);
+                if(!contains(cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES),
+                        CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW)) {
+                    continue;
+                }
                 if(cameraCharacteristics.get(CameraCharacteristics.LENS_FACING) ==
                         CameraCharacteristics.LENS_FACING_FRONT){
                     continue;
@@ -435,23 +500,26 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
 
                 Size largestImageSize = Collections.max(
                         Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
-                        new Comparator<Size>() {
-                            @Override
-                            public int compare(Size lhs, Size rhs) {
-                                return Long.signum(lhs.getWidth() * lhs.getHeight() -
-                                        rhs.getWidth() * rhs.getHeight());
-                            }
-                        }
-                );
+                        new CompareSizeByArea());
+                Size largestRawImageSize = Collections.max(
+                        Arrays.asList(map.getOutputSizes(ImageFormat.RAW_SENSOR)),
+                        new CompareSizeByArea());
                 mImageReader = ImageReader.newInstance(largestImageSize.getWidth(),
                         largestImageSize.getHeight(),
                         ImageFormat.JPEG,
                         1);
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener,
                         mBackgroundHandler);
+                mRawImageReader = ImageReader.newInstance(largestRawImageSize.getWidth(),
+                        largestRawImageSize.getHeight(),
+                        ImageFormat.RAW_SENSOR,
+                        1);
+                mRawImageReader.setOnImageAvailableListener(mOnRawImageAvailableListener,
+                        mBackgroundHandler);
 
                 mPreviewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
                 mCameraId = cameraId;
+                mCameraCharacteristics = cameraCharacteristics;
                 return;
             }
         } catch (CameraAccessException e) {
@@ -517,7 +585,8 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
             Surface previewSurface = new Surface(surfaceTexture);
             mPreviewCaptureRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewCaptureRequestBuilder.addTarget(previewSurface);
-            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()),
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface(),
+                            mRawImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
                         @Override
                         public void onConfigured(CameraCaptureSession session) {
@@ -602,6 +671,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         try {
             CaptureRequest.Builder captureStillBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureStillBuilder.addTarget(mImageReader.getSurface());
+            captureStillBuilder.addTarget(mRawImageReader.getSurface());
 
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureStillBuilder.set(CaptureRequest.JPEG_ORIENTATION,
@@ -618,6 +688,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                                     mImageFile = new File(mRequestingAppUri.getPath());
                                 } else {
                                     mImageFile = createImageFile();
+                                    mRawImageFile = createRawImageFile();
                                 }
 
 
@@ -634,6 +705,7 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                             Toast.makeText(getApplicationContext(),
                                     "Image Captured!", Toast.LENGTH_SHORT).show();
                             */
+                            mCaptureResult = result;
                             unLockFocus();
                         }
                     };
@@ -668,5 +740,26 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
             matrix.postRotate(90 * (rotation - 2), centerX, centerY);
         }
         mTextureView.setTransform(matrix);
+    }
+
+    private static class CompareSizeByArea implements Comparator<Size> {
+
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
+                    (long) rhs.getWidth() * rhs.getHeight());
+        }
+    }
+
+    private static Boolean contains(int[] modes, int mode) {
+        if(modes == null) {
+            return false;
+        }
+        for(int i : modes) {
+            if(i == mode) {
+                return true;
+            }
+        }
+        return false;
     }
 }
