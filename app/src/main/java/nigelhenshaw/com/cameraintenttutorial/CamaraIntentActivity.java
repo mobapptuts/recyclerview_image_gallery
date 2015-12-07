@@ -1,8 +1,10 @@
 package nigelhenshaw.com.cameraintenttutorial;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
@@ -22,6 +24,7 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -29,6 +32,7 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
 import android.provider.MediaStore;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -68,6 +72,8 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
 
     private static final String IMAGE_FILE_LOCATION = "image_file_location";
     private static final int ACTIVITY_START_CAMERA_APP = 0;
+    private static final int REQUEST_WRITE_STORAGE_RESULT = 1;
+    private static final int REQUEST_CAMERA_RESULT = 2;
     private static final int STATE_PREVIEW = 0;
     private static final int STATE__WAIT_LOCK = 1;
     private static final int STATE__PICTURE_CAPTURED = 2;
@@ -140,7 +146,8 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
                     break;
                 case STATE__WAIT_LOCK:
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
-                    if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED) {
+                    if(afState == CaptureRequest.CONTROL_AF_STATE_FOCUSED_LOCKED ||
+                            afState == CaptureRequest.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED) {
                         /*
                         unLockFocus();
                         Toast.makeText(getApplicationContext(), "Focus Lock Successful", Toast.LENGTH_SHORT).show();
@@ -268,8 +275,24 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
         GridLayoutManager layoutManager = new GridLayoutManager(this, 1);
         layoutManager.setOrientation(LinearLayoutManager.HORIZONTAL);
         mRecyclerView.setLayoutManager(layoutManager);
-        RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder), this);
-        mRecyclerView.setAdapter(imageAdapter);
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+                    PackageManager.PERMISSION_GRANTED) {
+                RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder), this);
+                mRecyclerView.setAdapter(imageAdapter);
+            } else {
+                if(shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    Toast.makeText(this,
+                            "We need write storage permission to start the gallery and save images",
+                            Toast.LENGTH_SHORT).show();
+                }
+                requestPermissions(new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        REQUEST_WRITE_STORAGE_RESULT);
+            }
+        } else {
+            RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder), this);
+            mRecyclerView.setAdapter(imageAdapter);
+        }
 
         final int maxMemorySize = (int) Runtime.getRuntime().maxMemory() / 1024;
         final int cacheSize = maxMemorySize / 10;
@@ -488,9 +511,49 @@ public class CamaraIntentActivity extends Activity implements RecyclerViewClickP
     private void openCamera() {
         CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         try {
-            cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+                        PackageManager.PERMISSION_GRANTED) {
+                    cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
+                } else {
+                    if(shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
+                        Toast.makeText(this,
+                                "No permission to use the camera services", Toast.LENGTH_SHORT).show();
+                    }
+                    requestPermissions(new String[] {Manifest.permission.CAMERA},
+                            REQUEST_CAMERA_RESULT);
+                }
+            } else {
+                cameraManager.openCamera(mCameraId, mCameraDeviceStateCallback, mBackgroundHandler);
+            }
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch(requestCode) {
+            case REQUEST_CAMERA_RESULT:
+                if(grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this,
+                            "Cannot run application because camera service permissions have not been granted",
+                            Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case REQUEST_WRITE_STORAGE_RESULT:
+                if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    RecyclerView.Adapter imageAdapter = new ImageAdapter(sortFilesToLatest(mGalleryFolder), this);
+                    mRecyclerView.setAdapter(imageAdapter);
+                } else {
+                    Toast.makeText(this,
+                            "Don't have permission to start the gallery or save images",
+                            Toast.LENGTH_SHORT).show();
+                }
+                break;
+            default:
+                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 
