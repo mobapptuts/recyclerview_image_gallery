@@ -5,7 +5,7 @@ android {
     buildToolsVersion "22.0.1"
 
     defaultConfig {
-        applicationId "nigelhenshaw.com.cameraintenttutorial"
+        applicationId "com.nigelhenshaw.camera2apiapp"
         minSdkVersion 21
         targetSdkVersion 22
         versionCode 1
@@ -21,5 +21,5 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:recyclerview-v7:21.0.+'
+    compile 'com.android.support:recyclerview-v7:22.1.1'
 }
