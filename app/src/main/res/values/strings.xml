@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Camera Intent Tutorial</string>
+    <string name="app_name">Camera API APP</string>
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
